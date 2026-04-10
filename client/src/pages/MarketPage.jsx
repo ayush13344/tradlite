@@ -108,6 +108,142 @@ function buildSparkline(symbol = "", positive = true) {
   return points;
 }
 
+/* ================= SIGNAL HELPERS ================= */
+
+function normalizeSignal(rawSignal = "") {
+  const value = String(rawSignal || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+
+  if (
+    value === "BUY" ||
+    value === "STRONG_BUY" ||
+    value === "BULLISH" ||
+    value === "LONG"
+  ) {
+    return "BUY";
+  }
+
+  if (
+    value === "SELL" ||
+    value === "STRONG_SELL" ||
+    value === "BEARISH" ||
+    value === "SHORT"
+  ) {
+    return "SELL";
+  }
+
+  if (value === "HOLD" || value === "NEUTRAL" || value === "WAIT") {
+    return "HOLD";
+  }
+
+  if (value === "NO_SIGNAL" || value === "NONE" || value === "NA") {
+    return "NO_SIGNAL";
+  }
+
+  return "ANALYZING";
+}
+
+function getSignalMeta(rawSignal = "", confidence = 0) {
+  const signal = normalizeSignal(rawSignal);
+  const safeConfidence = Math.max(0, Math.min(100, Number(confidence || 0)));
+
+  if (signal === "BUY") {
+    return {
+      label: "Buy",
+      confidence: safeConfidence,
+      wrap: "bg-emerald-50 border border-emerald-200 text-emerald-700",
+      dot: "bg-emerald-500",
+      bar: "bg-emerald-500",
+      icon: "▲",
+    };
+  }
+
+  if (signal === "SELL") {
+    return {
+      label: "Sell",
+      confidence: safeConfidence,
+      wrap: "bg-rose-50 border border-rose-200 text-rose-700",
+      dot: "bg-rose-500",
+      bar: "bg-rose-500",
+      icon: "▼",
+    };
+  }
+
+  if (signal === "HOLD") {
+    return {
+      label: "Hold",
+      confidence: safeConfidence,
+      wrap: "bg-amber-50 border border-amber-200 text-amber-700",
+      dot: "bg-amber-500",
+      bar: "bg-amber-500",
+      icon: "•",
+    };
+  }
+
+  if (signal === "NO_SIGNAL") {
+    return {
+      label: "No Signal",
+      confidence: 0,
+      wrap: "bg-slate-50 border border-slate-200 text-slate-700",
+      dot: "bg-slate-400",
+      bar: "bg-slate-400",
+      icon: "—",
+    };
+  }
+
+  return {
+    label: "Analyzing",
+    confidence: 0,
+    wrap: "bg-sky-50 border border-sky-200 text-sky-700",
+    dot: "bg-sky-500",
+    bar: "bg-sky-500",
+    icon: "◌",
+  };
+}
+
+function SignalBadge({ signal, confidence }) {
+  const meta = getSignalMeta(signal, confidence);
+
+  return (
+    <div className={`mt-4 rounded-[20px] p-3 shadow-sm ${meta.wrap}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-[14px] bg-white/80 flex items-center justify-center text-base font-bold shadow-sm">
+            {meta.icon}
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.2em] opacity-70 font-bold">
+              ML Signal
+            </p>
+            <p className="text-sm font-bold truncate">{meta.label}</p>
+          </div>
+        </div>
+
+        <span className={`h-2.5 w-2.5 rounded-full ${meta.dot}`} />
+      </div>
+
+      {(meta.label === "Buy" || meta.label === "Sell" || meta.label === "Hold") && (
+        <div className="mt-3">
+          <div className="mb-1 flex items-center justify-between text-[11px] font-semibold opacity-80">
+            <span>Confidence</span>
+            <span>{meta.confidence.toFixed(0)}%</span>
+          </div>
+
+          <div className="h-2 rounded-full bg-white/70 overflow-hidden">
+            <div
+              className={`h-full rounded-full ${meta.bar}`}
+              style={{ width: `${meta.confidence}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MiniChart({ symbol, positive }) {
   const pts = useMemo(() => buildSparkline(symbol, positive), [symbol, positive]);
   const path = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
@@ -144,7 +280,7 @@ function MiniChart({ symbol, positive }) {
   );
 }
 
-function MarketStockCard({ stock, rank, type = "gainer", onClick }) {
+function MarketStockCard({ stock, rank, type = "gainer", onClick, signalData }) {
   const positive = type !== "loser";
   const hue = getColorFromSymbol(stock.symbol || "ST");
   const volumeValue = stock.totalTradedVolume || stock.volume || 0;
@@ -205,6 +341,12 @@ function MarketStockCard({ stock, rank, type = "gainer", onClick }) {
           <MiniChart symbol={stock.symbol || "STOCK"} positive={positive} />
         </div>
       </div>
+
+      {/* ================= ADDED SIGNAL UI ================= */}
+      <SignalBadge
+        signal={signalData?.signal || "ANALYZING"}
+        confidence={signalData?.confidence || 0}
+      />
 
       <div className="mt-3 border-t border-slate-100 pt-3 flex items-center justify-between gap-3 text-sm text-slate-500">
         <div className="truncate">
@@ -319,6 +461,9 @@ export default function MarketPage() {
   const [volume, setVolume] = useState([]);
   const [activeTab, setActiveTab] = useState("gainers");
 
+  /* ================= ADDED SIGNAL STATE ================= */
+  const [signals, setSignals] = useState({});
+
   const tabs = [
     { key: "gainers", label: "Top Gainers" },
     { key: "losers", label: "Top Losers" },
@@ -366,6 +511,77 @@ export default function MarketPage() {
 
     fetchData();
   }, []);
+
+  /* ================= ADDED SIGNAL FETCH ================= */
+  useEffect(() => {
+    const allStocks = [...gainers, ...losers, ...volume];
+    const uniqueSymbols = [...new Set(allStocks.map((item) => item?.symbol).filter(Boolean))];
+
+    if (!uniqueSymbols.length) return;
+
+    const fetchSignals = async () => {
+      try {
+        const results = await Promise.allSettled(
+          uniqueSymbols.map(async (symbol) => {
+            try {
+              const res = await axios.get(
+                `http://127.0.0.1:8000/predict/signal?symbol=${encodeURIComponent(symbol)}`
+              );
+
+              const data = res?.data || {};
+
+              return {
+                symbol,
+                signal:
+                  data?.signal ||
+                  data?.prediction ||
+                  data?.label ||
+                  data?.action ||
+                  "NO_SIGNAL",
+                confidence: Number(
+                  data?.confidence ??
+                    data?.probability ??
+                    data?.score ??
+                    data?.strength ??
+                    0
+                ),
+              };
+            } catch {
+              return {
+                symbol,
+                signal: "NO_SIGNAL",
+                confidence: 0,
+              };
+            }
+          })
+        );
+
+        const nextSignals = {};
+
+        results.forEach((result, index) => {
+          const symbol = uniqueSymbols[index];
+
+          if (result.status === "fulfilled") {
+            nextSignals[symbol] = {
+              signal: result.value?.signal || "NO_SIGNAL",
+              confidence: Number(result.value?.confidence || 0),
+            };
+          } else {
+            nextSignals[symbol] = {
+              signal: "NO_SIGNAL",
+              confidence: 0,
+            };
+          }
+        });
+
+        setSignals(nextSignals);
+      } catch (err) {
+        console.error("Signal API Error:", err);
+      }
+    };
+
+    fetchSignals();
+  }, [gainers, losers, volume]);
 
   const tickerIndices = useMemo(() => {
     const desiredTickerNames = [
@@ -604,6 +820,7 @@ export default function MarketPage() {
                   stock={stock}
                   rank={i + 1}
                   type={activeTab === "losers" ? "loser" : "gainer"}
+                  signalData={signals[stock.symbol]}
                   onClick={() =>
                     navigate("/charts", { state: { symbol: stock.symbol } })
                   }

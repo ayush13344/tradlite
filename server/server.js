@@ -10,6 +10,7 @@ import marketRoutes from "./routes/MarkeTROutes.js";
 import HoldingRoutes from "./routes/HoldingRoutes.js";
 import CryptoRoutes from "./routes/CryptoRoutes.js";
 import TradeJournalRoutes from "./routes/TradeJournalRoutes.js";
+import mlRoutes from "./routes/mlRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +31,7 @@ app.use("/api/market", marketRoutes);
 app.use("/api/holdings", HoldingRoutes);
 app.use("/api/crypto", CryptoRoutes);
 app.use("/api/trade-journal", TradeJournalRoutes);
+app.use("/api/ml", mlRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!');

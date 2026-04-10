@@ -9,6 +9,7 @@ import HoldingsPage from "./pages/Holdings";
 import OrdersPage from "./pages/Orders";
 import CryptoMarketPage from "./pages/CryptoMarketPage";
 import TradeJournalPage from "./pages/TradeJournal";
+import MlTestPage from "./pages/MlTestPage";
 
 
 
@@ -25,6 +26,7 @@ const App=()=>{
       <Route path="/market" element={<MarketPage />} />
       <Route path="/crypto" element={<CryptoMarketPage />} />
       <Route path="/journal/:symbol?" element={<TradeJournalPage />} />
+      <Route path="/ml-test" element={<MlTestPage />} />
       </Route>
     </Routes>
     </>
