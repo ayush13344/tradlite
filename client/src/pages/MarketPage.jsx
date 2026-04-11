@@ -605,7 +605,7 @@ export default function MarketPage() {
           </p>
         </section>
 
-        {/* ================= BREADTH + TICKER ================= */}
+       
         {breadth && (
           <section className="text-center space-y-6">
             <div className="flex justify-center gap-16 text-lg font-semibold">
@@ -643,7 +643,7 @@ export default function MarketPage() {
           `}
         </style>
 
-        {/* ================= MARKET MOVERS ================= */}
+        
         <section className="space-y-8">
           <div className="flex flex-wrap items-center justify-between gap-5">
             <div>
@@ -758,7 +758,7 @@ export default function MarketPage() {
           </div>
         </section>
 
-        {/* ================= TRADE JOURNAL ================= */}
+      
         <section className="pt-2">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10">
             <div>
@@ -796,7 +796,7 @@ export default function MarketPage() {
           </div>
         </section>
 
-        {/* ================= INVESTMENT IDEAS ================= */}
+       
         <section className="pt-4">
           <h2 className="text-center text-6xl font-black tracking-tight text-slate-900 mb-14">
             Investment Ideas

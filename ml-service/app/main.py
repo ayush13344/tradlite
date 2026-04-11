@@ -9,20 +9,35 @@ logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 logging.getLogger("peewee").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
+# =========================
+# LOAD SIGNAL MODEL
+# =========================
 try:
     from app.predictors.signal_model import get_signal_prediction
-    MODEL_LOADED = True
-    MODEL_ERROR = None
+    SIGNAL_MODEL_LOADED = True
+    SIGNAL_MODEL_ERROR = None
 except Exception as e:
     get_signal_prediction = None
-    MODEL_LOADED = False
-    MODEL_ERROR = str(e)
+    SIGNAL_MODEL_LOADED = False
+    SIGNAL_MODEL_ERROR = str(e)
     logging.critical(f"[startup] Failed to load signal model: {e}")
 
+# =========================
+# LOAD PRICE MODEL
+# =========================
+try:
+    from app.predictors.price_prediction_model import get_price_prediction
+    PRICE_MODEL_LOADED = True
+    PRICE_MODEL_ERROR = None
+except Exception as e:
+    get_price_prediction = None
+    PRICE_MODEL_LOADED = False
+    PRICE_MODEL_ERROR = str(e)
+    logging.critical(f"[startup] Failed to load price model: {e}")
 
 app = FastAPI(
     title="Trading ML Service",
-    description="ML-powered BUY/SELL signal API",
+    description="ML-powered trading API",
     version="1.0.0"
 )
 
@@ -35,17 +50,25 @@ app.add_middleware(
 )
 
 
-def require_model():
-    if not MODEL_LOADED:
+def require_signal_model():
+    if not SIGNAL_MODEL_LOADED:
         raise HTTPException(
             status_code=503,
-            detail=f"ML model is not available: {MODEL_ERROR}"
+            detail=f"Signal model is not available: {SIGNAL_MODEL_ERROR}"
+        )
+
+
+def require_price_model():
+    if not PRICE_MODEL_LOADED:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Price model is not available: {PRICE_MODEL_ERROR}"
         )
 
 
 def clean_symbol(raw: str) -> str:
     s = str(raw or "").strip().upper()
-    s = s.split(":")[0]           # DLF:1 → DLF
+    s = s.split(":")[0]
     s = s.replace(".NS", "")
     s = s.replace(".BO", "")
     s = s.replace("-INR", "")
@@ -54,9 +77,9 @@ def clean_symbol(raw: str) -> str:
     return s.strip()
 
 
-def run_prediction(symbol: str) -> dict:
+def run_signal_prediction(symbol: str) -> dict:
     cleaned = clean_symbol(symbol)
-    logging.info(f"[predict] raw='{symbol}' → cleaned='{cleaned}'")
+    logging.info(f"[signal] raw='{symbol}' -> cleaned='{cleaned}'")
 
     if not cleaned:
         return {"success": False, "error": "Symbol is required"}
@@ -67,15 +90,41 @@ def run_prediction(symbol: str) -> dict:
             return {
                 "success": False,
                 "symbol": cleaned,
-                "error": "Unexpected response from prediction engine"
+                "error": "Unexpected response from signal prediction engine"
             }
         return result
     except Exception as e:
-        logging.exception(f"[predict] Unhandled error for symbol '{cleaned}'")
+        logging.exception(f"[signal] Unhandled error for symbol '{cleaned}'")
         return {
             "success": False,
             "symbol": cleaned,
-            "error": "Prediction failed due to an unexpected error.",
+            "error": "Signal prediction failed",
+            "details": str(e)
+        }
+
+
+def run_price_prediction(symbol: str) -> dict:
+    cleaned = clean_symbol(symbol)
+    logging.info(f"[price] raw='{symbol}' -> cleaned='{cleaned}'")
+
+    if not cleaned:
+        return {"success": False, "error": "Symbol is required"}
+
+    try:
+        result = get_price_prediction(cleaned)
+        if not isinstance(result, dict):
+            return {
+                "success": False,
+                "symbol": cleaned,
+                "error": "Unexpected response from price prediction engine"
+            }
+        return result
+    except Exception as e:
+        logging.exception(f"[price] Unhandled error for symbol '{cleaned}'")
+        return {
+            "success": False,
+            "symbol": cleaned,
+            "error": "Price prediction failed",
             "details": str(e)
         }
 
@@ -85,42 +134,42 @@ def root():
     return {
         "message": "Trading ML service is running",
         "status": "ok",
-        "model_loaded": MODEL_LOADED,
-        **({"model_error": MODEL_ERROR} if not MODEL_LOADED else {})
+        "signal_model_loaded": SIGNAL_MODEL_LOADED,
+        "price_model_loaded": PRICE_MODEL_LOADED,
+        **({"signal_model_error": SIGNAL_MODEL_ERROR} if not SIGNAL_MODEL_LOADED else {}),
+        **({"price_model_error": PRICE_MODEL_ERROR} if not PRICE_MODEL_LOADED else {}),
     }
 
 
 @app.get("/health")
 def health():
-    if not MODEL_LOADED:
-        return JSONResponse(
-            status_code=503,
-            content={"status": "unhealthy", "reason": MODEL_ERROR}
-        )
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "signal_model_loaded": SIGNAL_MODEL_LOADED,
+        "price_model_loaded": PRICE_MODEL_LOADED
+    }
 
 
-# =========================================================
-# SIGNAL PREDICTION
-# {symbol:path} is the KEY fix — captures DLF:1 without 404
-# =========================================================
+# =========================
+# SIGNAL ROUTES
+# =========================
 
 @app.get("/predict/signal/{symbol:path}")
 def predict_signal(symbol: str):
-    require_model()
-    result = run_prediction(symbol)
-    logging.critical(f"[predict_signal] raw='{symbol}' cleaned='{clean_symbol(symbol)}' result={result}")
+    require_signal_model()
+    result = run_signal_prediction(symbol)
     if not result.get("success"):
         return JSONResponse(status_code=400, content=result)
     return result
 
 
 @app.post("/predict/signal/batch")
-def predict_batch(symbols: list[str]):
-    require_model()
+def predict_signal_batch(symbols: list[str]):
+    require_signal_model()
     if not symbols:
         raise HTTPException(status_code=400, detail="symbols list is empty")
-    results = [run_prediction(s) for s in symbols]
+
+    results = [run_signal_prediction(s) for s in symbols]
     return {
         "count": len(results),
         "success_count": sum(1 for r in results if r.get("success")),
@@ -129,39 +178,43 @@ def predict_batch(symbols: list[str]):
     }
 
 
-@app.get("/debug/symbol/{symbol:path}")
-def debug_symbol(symbol: str):
-    require_model()
-    result = run_prediction(symbol)
+# =========================
+# PRICE ROUTES
+# =========================
+
+@app.get("/predict/price/{symbol:path}")
+def predict_price(symbol: str):
+    require_price_model()
+    result = run_price_prediction(symbol)
     if not result.get("success"):
-        return JSONResponse(status_code=400, content={
-            "symbol": symbol,
-            "cleaned_symbol": clean_symbol(symbol),
-            "status": "failed",
-            "error": result.get("error"),
-            "details": result.get("details"),
-            "hint": result.get("hint"),
-        })
+        return JSONResponse(status_code=400, content=result)
+    return result
+
+
+@app.get("/debug/price/{symbol:path}")
+def debug_price(symbol: str):
+    require_price_model()
+    cleaned = clean_symbol(symbol)
+    result = run_price_prediction(symbol)
     return {
-        "symbol": result.get("symbol"),
-        "yahoo_symbol": result.get("yahoo_symbol"),
-        "cleaned_input": clean_symbol(symbol),
-        "status": "success",
-        "signal": result.get("signal"),
-        "confidence": result.get("confidence"),
-        "threshold_used": result.get("threshold_used"),
-        "price": result.get("price"),
-        "date": result.get("date"),
-        "seen_in_training": result.get("seen_in_training"),
-        "note": result.get("note"),
+        "raw_symbol": symbol,
+        "cleaned_symbol": cleaned,
+        "price_model_loaded": PRICE_MODEL_LOADED,
+        "result": result
     }
 
 
+# =========================
+# MODEL INFO ROUTES
+# =========================
+
 @app.get("/model/info")
 def model_info():
-    require_model()
+    require_signal_model()
     try:
-        import joblib, os
+        import joblib
+        import os
+
         bundle = joblib.load(os.path.join("models", "signal_model.pkl"))
         return {
             "status": "loaded",
@@ -169,6 +222,29 @@ def model_info():
             "trained_symbols_count": len(bundle.get("symbols", [])),
             "confidence_threshold": bundle.get("confidence_threshold", 0.70),
             "trained_symbols": bundle.get("symbols", []),
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={
+            "status": "error",
+            "detail": str(e)
+        })
+
+
+@app.get("/model/price/info")
+def price_model_info():
+    require_price_model()
+    try:
+        import joblib
+        import os
+
+        bundle = joblib.load(os.path.join("models", "price_model.pkl"))
+        return {
+            "status": "loaded",
+            "features_count": len(bundle.get("features", [])),
+            "trained_symbols_count": len(bundle.get("symbols", [])),
+            "trained_symbols": bundle.get("symbols", []),
+            "target": bundle.get("target"),
+            "metrics": bundle.get("metrics", {}),
         }
     except Exception as e:
         return JSONResponse(status_code=500, content={
