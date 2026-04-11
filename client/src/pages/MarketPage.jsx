@@ -92,11 +92,7 @@ function buildSparkline(symbol = "", positive = true) {
     const wave = ((seed + i * 13) % 12) - 6;
     currentY += positive ? -3 + wave * 0.4 : 3 + wave * 0.4;
     currentY = Math.max(12, Math.min(88, currentY));
-
-    points.push({
-      x: 14 + i * 24,
-      y: currentY,
-    });
+    points.push({ x: 14 + i * 24, y: currentY });
   }
 
   if (positive) {
@@ -116,32 +112,10 @@ function normalizeSignal(rawSignal = "") {
     .toUpperCase()
     .replace(/\s+/g, "_");
 
-  if (
-    value === "BUY" ||
-    value === "STRONG_BUY" ||
-    value === "BULLISH" ||
-    value === "LONG"
-  ) {
-    return "BUY";
-  }
-
-  if (
-    value === "SELL" ||
-    value === "STRONG_SELL" ||
-    value === "BEARISH" ||
-    value === "SHORT"
-  ) {
-    return "SELL";
-  }
-
-  if (value === "HOLD" || value === "NEUTRAL" || value === "WAIT") {
-    return "HOLD";
-  }
-
-  if (value === "NO_SIGNAL" || value === "NONE" || value === "NA") {
-    return "NO_SIGNAL";
-  }
-
+  if (["BUY", "STRONG_BUY", "BULLISH", "LONG"].includes(value)) return "BUY";
+  if (["SELL", "STRONG_SELL", "BEARISH", "SHORT"].includes(value)) return "SELL";
+  if (["HOLD", "NEUTRAL", "WAIT"].includes(value)) return "HOLD";
+  if (["NO_SIGNAL", "NONE", "NA"].includes(value)) return "NO_SIGNAL";
   return "ANALYZING";
 }
 
@@ -159,7 +133,6 @@ function getSignalMeta(rawSignal = "", confidence = 0) {
       icon: "▲",
     };
   }
-
   if (signal === "SELL") {
     return {
       label: "Sell",
@@ -170,7 +143,6 @@ function getSignalMeta(rawSignal = "", confidence = 0) {
       icon: "▼",
     };
   }
-
   if (signal === "HOLD") {
     return {
       label: "Hold",
@@ -181,7 +153,6 @@ function getSignalMeta(rawSignal = "", confidence = 0) {
       icon: "•",
     };
   }
-
   if (signal === "NO_SIGNAL") {
     return {
       label: "No Signal",
@@ -192,7 +163,6 @@ function getSignalMeta(rawSignal = "", confidence = 0) {
       icon: "—",
     };
   }
-
   return {
     label: "Analyzing",
     confidence: 0,
@@ -213,7 +183,6 @@ function SignalBadge({ signal, confidence }) {
           <div className="h-10 w-10 rounded-[14px] bg-white/80 flex items-center justify-center text-base font-bold shadow-sm">
             {meta.icon}
           </div>
-
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.2em] opacity-70 font-bold">
               ML Signal
@@ -221,17 +190,15 @@ function SignalBadge({ signal, confidence }) {
             <p className="text-sm font-bold truncate">{meta.label}</p>
           </div>
         </div>
-
         <span className={`h-2.5 w-2.5 rounded-full ${meta.dot}`} />
       </div>
 
-      {(meta.label === "Buy" || meta.label === "Sell" || meta.label === "Hold") && (
+      {["Buy", "Sell", "Hold"].includes(meta.label) && (
         <div className="mt-3">
           <div className="mb-1 flex items-center justify-between text-[11px] font-semibold opacity-80">
             <span>Confidence</span>
             <span>{meta.confidence.toFixed(0)}%</span>
           </div>
-
           <div className="h-2 rounded-full bg-white/70 overflow-hidden">
             <div
               className={`h-full rounded-full ${meta.bar}`}
@@ -266,7 +233,6 @@ function MiniChart({ symbol, positive }) {
           />
         </linearGradient>
       </defs>
-
       <path d={areaPath} fill={`url(#${gradientId})`} />
       <path
         d={path}
@@ -301,7 +267,6 @@ function MarketStockCard({ stock, rank, type = "gainer", onClick, signalData }) 
           >
             {getInitials(stock.symbol)}
           </div>
-
           <div className="min-w-0">
             <h3 className="text-[1.55rem] font-extrabold text-slate-900 leading-none truncate">
               {stock.symbol}
@@ -311,7 +276,6 @@ function MarketStockCard({ stock, rank, type = "gainer", onClick, signalData }) 
             </p>
           </div>
         </div>
-
         <div
           className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
             positive ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
@@ -326,7 +290,6 @@ function MarketStockCard({ stock, rank, type = "gainer", onClick, signalData }) 
           <div className="text-[2rem] font-black tracking-tight text-slate-900 leading-none">
             {formatPrice(stock.lastPrice || stock.price || 0)}
           </div>
-
           <div
             className={`mt-3 text-[1rem] font-bold ${
               positive ? "text-emerald-600" : "text-rose-600"
@@ -336,13 +299,11 @@ function MarketStockCard({ stock, rank, type = "gainer", onClick, signalData }) 
             {Math.abs(Number(stock.pChange || stock.change || 0)).toFixed(2)}% Today
           </div>
         </div>
-
         <div className="w-full">
           <MiniChart symbol={stock.symbol || "STOCK"} positive={positive} />
         </div>
       </div>
 
-      {/* ================= ADDED SIGNAL UI ================= */}
       <SignalBadge
         signal={signalData?.signal || "ANALYZING"}
         confidence={signalData?.confidence || 0}
@@ -355,7 +316,6 @@ function MarketStockCard({ stock, rank, type = "gainer", onClick, signalData }) 
             {formatCompactNumber(volumeValue)}
           </span>
         </div>
-
         <div className="truncate text-right">
           Market Cap{" "}
           <span className="text-slate-700 font-semibold">
@@ -371,15 +331,12 @@ function InvestmentIdeaCard({ icon, title, description, onClick }) {
   return (
     <div className="rounded-[28px] bg-white border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.08)] px-8 py-10 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)]">
       <div className="text-6xl mb-8">{icon}</div>
-
       <h3 className="text-[2rem] leading-tight font-bold text-slate-900 min-h-[96px] flex items-center justify-center">
         {title}
       </h3>
-
       <p className="mt-5 text-[1.08rem] leading-9 text-slate-500 max-w-[320px] mx-auto min-h-[120px] flex items-center justify-center">
         {description}
       </p>
-
       <button
         onClick={onClick}
         className="mt-8 w-full rounded-[18px] bg-gradient-to-r from-[#36c9b4] to-[#49c7a8] text-white text-[1.15rem] font-semibold py-5 shadow-[0_12px_25px_rgba(54,201,180,0.28)] transition hover:scale-[1.02]"
@@ -398,7 +355,6 @@ function TradeJournalCard({ icon, title, description, buttonText, onClick }) {
           <div className="h-20 w-20 rounded-[24px] bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-500 flex items-center justify-center text-4xl text-white shadow-[0_14px_34px_rgba(99,102,241,0.28)]">
             {icon}
           </div>
-
           <div className="flex-1">
             <h3 className="text-[2rem] leading-tight font-bold text-slate-900">
               {title}
@@ -411,30 +367,16 @@ function TradeJournalCard({ icon, title, description, buttonText, onClick }) {
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="rounded-[20px] bg-slate-50 border border-slate-100 px-5 py-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              Notes
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-700">
-              Store trade reasoning
-            </p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Notes</p>
+            <p className="mt-2 text-sm font-semibold text-slate-700">Store trade reasoning</p>
           </div>
-
           <div className="rounded-[20px] bg-slate-50 border border-slate-100 px-5 py-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              Review
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-700">
-              Check stock-wise history
-            </p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Review</p>
+            <p className="mt-2 text-sm font-semibold text-slate-700">Check stock-wise history</p>
           </div>
-
           <div className="rounded-[20px] bg-slate-50 border border-slate-100 px-5 py-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              Learn
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-700">
-              Track mistakes and lessons
-            </p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Learn</p>
+            <p className="mt-2 text-sm font-semibold text-slate-700">Track mistakes and lessons</p>
           </div>
         </div>
 
@@ -460,8 +402,6 @@ export default function MarketPage() {
   const [breadth, setBreadth] = useState(null);
   const [volume, setVolume] = useState([]);
   const [activeTab, setActiveTab] = useState("gainers");
-
-  /* ================= ADDED SIGNAL STATE ================= */
   const [signals, setSignals] = useState({});
 
   const tabs = [
@@ -476,7 +416,6 @@ export default function MarketPage() {
     const fetchData = async () => {
       try {
         const res = await axios.get("http://localhost:3000/api/market/dashboard");
-
         const data = res.data?.data;
         if (!data) return;
 
@@ -488,13 +427,11 @@ export default function MarketPage() {
             .sort((a, b) => (b.pChange || 0) - (a.pChange || 0))
             .slice(0, 6)
         );
-
         setLosers(
           [...(data.losers || [])]
             .sort((a, b) => (a.pChange || 0) - (b.pChange || 0))
             .slice(0, 6)
         );
-
         setVolume(
           [...(data.volume || [])]
             .sort(
@@ -512,10 +449,12 @@ export default function MarketPage() {
     fetchData();
   }, []);
 
-  /* ================= ADDED SIGNAL FETCH ================= */
+  /* ================= SIGNAL FETCH — FIXED URL ================= */
   useEffect(() => {
     const allStocks = [...gainers, ...losers, ...volume];
-    const uniqueSymbols = [...new Set(allStocks.map((item) => item?.symbol).filter(Boolean))];
+    const uniqueSymbols = [
+      ...new Set(allStocks.map((item) => item?.symbol).filter(Boolean)),
+    ];
 
     if (!uniqueSymbols.length) return;
 
@@ -524,8 +463,20 @@ export default function MarketPage() {
         const results = await Promise.allSettled(
           uniqueSymbols.map(async (symbol) => {
             try {
+              // FIXED: use path param /predict/signal/{symbol}
+              // not query param /predict/signal?symbol=
+              const cleanSymbol = String(symbol)
+                .trim()
+                .toUpperCase()
+                .split(":")[0]
+                .replace(/\.NS$/i, "")
+                .replace(/\.BO$/i, "")
+                .replace(/-INR$/i, "")
+                .replace(/-USD$/i, "")
+                .replace(/[^A-Z0-9]/g, "");
+
               const res = await axios.get(
-                `http://127.0.0.1:8000/predict/signal?symbol=${encodeURIComponent(symbol)}`
+                `http://127.0.0.1:8000/predict/signal/${encodeURIComponent(cleanSymbol)}`
               );
 
               const data = res?.data || {};
@@ -547,30 +498,21 @@ export default function MarketPage() {
                 ),
               };
             } catch {
-              return {
-                symbol,
-                signal: "NO_SIGNAL",
-                confidence: 0,
-              };
+              return { symbol, signal: "NO_SIGNAL", confidence: 0 };
             }
           })
         );
 
         const nextSignals = {};
-
         results.forEach((result, index) => {
           const symbol = uniqueSymbols[index];
-
           if (result.status === "fulfilled") {
             nextSignals[symbol] = {
               signal: result.value?.signal || "NO_SIGNAL",
               confidence: Number(result.value?.confidence || 0),
             };
           } else {
-            nextSignals[symbol] = {
-              signal: "NO_SIGNAL",
-              confidence: 0,
-            };
+            nextSignals[symbol] = { signal: "NO_SIGNAL", confidence: 0 };
           }
         });
 
@@ -632,7 +574,6 @@ export default function MarketPage() {
   }
 
   const niftyDown = indices[0]?.change < 0;
-
   const activeList =
     activeTab === "gainers" ? gainers : activeTab === "losers" ? losers : volume;
 
@@ -645,17 +586,15 @@ export default function MarketPage() {
       }`}
     >
       <div className="max-w-[1450px] mx-auto px-8 py-16 space-y-20">
-        {/* ================= HERO ================= */}
 
+        
         <section className="text-center">
           <p className="text-sm text-slate-600 uppercase tracking-widest mb-4">
             {indices[0]?.name}
           </p>
-
           <h1 className="text-7xl font-bold mb-6">
             <AnimatedNumber value={indices[0]?.price} />
           </h1>
-
           <p
             className={`text-2xl font-semibold ${
               niftyDown ? "text-rose-600" : "text-emerald-600"
@@ -667,7 +606,6 @@ export default function MarketPage() {
         </section>
 
         {/* ================= BREADTH + TICKER ================= */}
-
         {breadth && (
           <section className="text-center space-y-6">
             <div className="flex justify-center gap-16 text-lg font-semibold">
@@ -698,28 +636,24 @@ export default function MarketPage() {
 
         <style>
           {`
-          @keyframes ticker {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-          }
-        `}
+            @keyframes ticker {
+              0% { transform: translateX(100%); }
+              100% { transform: translateX(-100%); }
+            }
+          `}
         </style>
 
-        {/* ================= SINGLE TAB SECTION ================= */}
-
+        {/* ================= MARKET MOVERS ================= */}
         <section className="space-y-8">
           <div className="flex flex-wrap items-center justify-between gap-5">
-            <div className="flex items-center gap-4">
-              <div>
-                <h2 className="text-4xl font-black tracking-tight text-slate-900">
-                  Market Movers
-                </h2>
-                <p className="mt-1 text-slate-500 text-base">
-                  Switch between gainers, losers, and most active stocks
-                </p>
-              </div>
+            <div>
+              <h2 className="text-4xl font-black tracking-tight text-slate-900">
+                Market Movers
+              </h2>
+              <p className="mt-1 text-slate-500 text-base">
+                Switch between gainers, losers, and most active stocks
+              </p>
             </div>
-
             <div className="flex items-center gap-3">
               <button className="h-14 w-14 rounded-2xl bg-white/90 backdrop-blur-md border border-white/70 text-slate-500 shadow-[0_10px_24px_rgba(15,23,42,0.08)] text-xl transition hover:-translate-y-0.5 hover:text-slate-800">
                 ☰
@@ -741,22 +675,17 @@ export default function MarketPage() {
                       ? "bg-gradient-to-r from-indigo-600 to-violet-500 border-indigo-400"
                       : "bg-gradient-to-r from-emerald-500 to-teal-400 border-emerald-300"
                   }`}
-                  style={{
-                    left: `calc(${activeIndex * 33.333}% + 8px)`,
-                  }}
+                  style={{ left: `calc(${activeIndex * 33.333}% + 8px)` }}
                 />
 
                 {tabs.map((tab) => {
                   const active = activeTab === tab.key;
-
                   return (
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
                       className={`relative z-10 rounded-[18px] px-6 py-4 text-[1.02rem] font-bold transition-all duration-300 ${
-                        active
-                          ? "text-white"
-                          : "text-slate-600 hover:text-slate-900"
+                        active ? "text-white" : "text-slate-600 hover:text-slate-900"
                       }`}
                     >
                       <div className="flex items-center justify-center gap-2">
@@ -796,7 +725,6 @@ export default function MarketPage() {
                     : "Stocks with the highest trading activity and market participation."}
                 </p>
               </div>
-
               <div
                 className={`hidden md:flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${
                   activeTab === "losers"
@@ -830,8 +758,7 @@ export default function MarketPage() {
           </div>
         </section>
 
-        {/* ================= TRADE JOURNAL SECTION ================= */}
-
+        {/* ================= TRADE JOURNAL ================= */}
         <section className="pt-2">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10">
             <div>
@@ -843,7 +770,6 @@ export default function MarketPage() {
                 understand past mistakes, and build a stronger process with every trade.
               </p>
             </div>
-
             <button
               onClick={() => navigate("/journal")}
               className="w-full lg:w-auto rounded-[18px] bg-white border border-slate-200 px-7 py-4 text-slate-800 text-[1rem] font-semibold shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5"
@@ -860,7 +786,6 @@ export default function MarketPage() {
               buttonText="View Trade Journal History"
               onClick={() => navigate("/journal")}
             />
-
             <TradeJournalCard
               icon="🧠"
               title="Review Stock-wise Notes"
@@ -872,12 +797,10 @@ export default function MarketPage() {
         </section>
 
         {/* ================= INVESTMENT IDEAS ================= */}
-
         <section className="pt-4">
           <h2 className="text-center text-6xl font-black tracking-tight text-slate-900 mb-14">
             Investment Ideas
           </h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
             <InvestmentIdeaCard
               icon="📈"
@@ -885,21 +808,18 @@ export default function MarketPage() {
               description="Strong businesses with growth potential for patient investors building wealth over 3–5 years."
               onClick={() => navigate("/charts")}
             />
-
             <InvestmentIdeaCard
               icon="⚡"
               title="Short Term Momentum"
               description="Stocks showing price strength, breakout structure, and near-term bullish momentum."
               onClick={() => navigate("/charts")}
             />
-
             <InvestmentIdeaCard
               icon="💰"
               title="Dividend Stocks"
               description="Reliable companies that may offer stable cash flows and regular dividend income."
               onClick={() => navigate("/charts")}
             />
-
             <InvestmentIdeaCard
               icon="💎"
               title="Value Picks"
@@ -908,6 +828,7 @@ export default function MarketPage() {
             />
           </div>
         </section>
+
       </div>
     </div>
   );

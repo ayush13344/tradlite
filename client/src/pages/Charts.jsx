@@ -328,12 +328,16 @@ function MlSignalCard({ symbol, isCrypto, displayCurrency }) {
       setError("");
 
       const cleanSymbol = String(symbol || "")
-        .trim()
-        .toUpperCase()
-        .replace(/\.NS$/i, "")
-        .replace(/-INR$/i, "");
+  .trim()
+  .toUpperCase()
+  .replace(/\.NS$/i, "")
+  .replace(/-INR$/i, "")
+  .replace(/:.*$/, "")        // removes :1 or anything after colon
+  .replace(/[^A-Z0-9]/g, ""); // removes any remaining non-alphanumeric chars
 
-      const res = await fetch(`${ML_API_BASE}/predict/signal/${encodeURIComponent(cleanSymbol)}`);
+      const res = await fetch(
+        `${ML_API_BASE}/predict/signal/${encodeURIComponent(cleanSymbol)}`
+      );
       const text = await res.text();
 
       let json = null;
@@ -343,8 +347,12 @@ function MlSignalCard({ symbol, isCrypto, displayCurrency }) {
         throw new Error("Invalid ML API response");
       }
 
-      if (!res.ok) {
-        throw new Error(json?.detail || `ML API error (${res.status})`);
+      // Backend returns 400 with { success: false, error: "..." } for bad symbols
+      if (!res.ok || json?.success === false) {
+        const errMsg = json?.error || json?.detail || `ML API error (${res.status})`;
+        const hint   = json?.hint   || "";
+        const note   = json?.note   || "";
+        throw new Error([errMsg, hint, note].filter(Boolean).join(" — "));
       }
 
       setSignalData(json);
@@ -371,8 +379,14 @@ function MlSignalCard({ symbol, isCrypto, displayCurrency }) {
             {isCrypto ? "Crypto model output" : "Stock model output"} for{" "}
             <span className="font-semibold text-gray-700">{symbol}</span>
           </div>
+          {signalData && (
+            <div className="mt-1 text-[10px] text-gray-400">
+              {signalData.seen_in_training
+                ? "✅ Trained symbol — well calibrated"
+                : "⚠️ Unseen symbol — generalized prediction"}
+            </div>
+          )}
         </div>
-
         <button
           type="button"
           onClick={loadSignal}
@@ -384,13 +398,30 @@ function MlSignalCard({ symbol, isCrypto, displayCurrency }) {
 
       {loading && (
         <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
-          Loading ML signal...
+          Fetching data from Yahoo Finance and running prediction...
         </div>
       )}
 
       {!loading && error && (
-        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-          {error}
+        <div className="mt-4 space-y-3">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+            {error}
+          </div>
+          {/* Helpful tips for common failures */}
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-700 space-y-1">
+            <div className="font-semibold">Troubleshooting tips:</div>
+            <div>• Verify the symbol exists on NSE/BSE (e.g. RELIANCE, TCS, INFY)</div>
+            <div>• For crypto use BTC, ETH, SOL (not BTC-USD)</div>
+            <div>• Symbol needs at least 60 days of trading history</div>
+            <div>• Try again in a moment if Yahoo Finance is temporarily slow</div>
+          </div>
+          <button
+            type="button"
+            onClick={loadSignal}
+            className="w-full rounded-xl bg-gray-900 py-2 text-xs font-semibold text-white hover:bg-gray-700"
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -401,7 +432,9 @@ function MlSignalCard({ symbol, isCrypto, displayCurrency }) {
               <div>
                 <div className="text-xs text-gray-500">Current Signal</div>
                 <div className="mt-2 flex items-center gap-2">
-                  <span className={`rounded-full border px-3 py-1 text-xs font-bold ${tone.badge}`}>
+                  <span
+                    className={`rounded-full border px-3 py-1 text-xs font-bold ${tone.badge}`}
+                  >
                     {signalData.signal}
                   </span>
                   <span className="text-sm font-semibold text-gray-900">
@@ -409,7 +442,6 @@ function MlSignalCard({ symbol, isCrypto, displayCurrency }) {
                   </span>
                 </div>
               </div>
-
               <div className="text-right">
                 <div className="text-xs text-gray-500">Probability Up</div>
                 <div className="mt-1 text-lg font-bold text-gray-900">
@@ -426,16 +458,37 @@ function MlSignalCard({ symbol, isCrypto, displayCurrency }) {
               <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                 <div
                   className={`h-full rounded-full ${tone.bar}`}
-                  style={{ width: `${Math.max(0, Math.min(100, Number(signalData.confidence || 0)))}%` }}
+                  style={{
+                    width: `${Math.max(0, Math.min(100, Number(signalData.confidence || 0)))}%`,
+                  }}
                 />
               </div>
+            </div>
+
+            {/* Threshold used */}
+            <div className="mt-2 text-[10px] text-gray-400">
+              Threshold used:{" "}
+              <span className="font-semibold text-gray-600">
+                {signalData.threshold_used ?? signalData.threshold}%
+              </span>
+              {" "}·{" "}
+              <span className="italic">{signalData.note}</span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Stat label="Price" value={formatCurrency(signalData.price, displayCurrency)} />
-            <Stat label="Threshold" value={`${signalData.threshold}%`} />
-            <Stat label="Probability Up" value={`${signalData.probability_up}%`} />
+            <Stat
+              label="Price"
+              value={formatCurrency(signalData.price, displayCurrency)}
+            />
+            <Stat
+              label="Threshold"
+              value={`${signalData.threshold_used ?? signalData.threshold}%`}
+            />
+            <Stat
+              label="Probability Up"
+              value={`${signalData.probability_up}%`}
+            />
             <Stat label="Signal Date" value={signalData.date || "--"} />
           </div>
 
@@ -464,27 +517,51 @@ function MlSignalCard({ symbol, isCrypto, displayCurrency }) {
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-xl bg-gray-50 p-3">
                 <div className="text-gray-500">RSI 14</div>
-                <div className="mt-1 font-semibold text-gray-900">{formatNum(signalData?.indicators?.rsi_14)}</div>
+                <div className="mt-1 font-semibold text-gray-900">
+                  {formatNum(signalData?.indicators?.rsi_14)}
+                </div>
               </div>
               <div className="rounded-xl bg-gray-50 p-3">
                 <div className="text-gray-500">Volume Ratio</div>
-                <div className="mt-1 font-semibold text-gray-900">{formatNum(signalData?.indicators?.volume_ratio)}</div>
+                <div className="mt-1 font-semibold text-gray-900">
+                  {formatNum(signalData?.indicators?.volume_ratio)}
+                </div>
               </div>
               <div className="rounded-xl bg-gray-50 p-3">
                 <div className="text-gray-500">EMA 10</div>
-                <div className="mt-1 font-semibold text-gray-900">{formatCurrency(signalData?.indicators?.ema_10, displayCurrency)}</div>
+                <div className="mt-1 font-semibold text-gray-900">
+                  {formatCurrency(signalData?.indicators?.ema_10, displayCurrency)}
+                </div>
               </div>
               <div className="rounded-xl bg-gray-50 p-3">
                 <div className="text-gray-500">EMA 20</div>
-                <div className="mt-1 font-semibold text-gray-900">{formatCurrency(signalData?.indicators?.ema_20, displayCurrency)}</div>
+                <div className="mt-1 font-semibold text-gray-900">
+                  {formatCurrency(signalData?.indicators?.ema_20, displayCurrency)}
+                </div>
               </div>
               <div className="rounded-xl bg-gray-50 p-3">
                 <div className="text-gray-500">Trend Strength</div>
-                <div className="mt-1 font-semibold text-gray-900">{formatNum(signalData?.indicators?.trend_strength)}</div>
+                <div className="mt-1 font-semibold text-gray-900">
+                  {formatNum(signalData?.indicators?.trend_strength)}
+                </div>
               </div>
               <div className="rounded-xl bg-gray-50 p-3">
                 <div className="text-gray-500">Price vs SMA20</div>
-                <div className="mt-1 font-semibold text-gray-900">{formatNum(signalData?.indicators?.price_vs_sma20)}</div>
+                <div className="mt-1 font-semibold text-gray-900">
+                  {formatNum(signalData?.indicators?.price_vs_sma20)}
+                </div>
+              </div>
+              <div className="rounded-xl bg-gray-50 p-3">
+                <div className="text-gray-500">Breakout Up</div>
+                <div className="mt-1 font-semibold text-gray-900">
+                  {signalData?.indicators?.breakout_up === 1 ? "✅ Yes" : "No"}
+                </div>
+              </div>
+              <div className="rounded-xl bg-gray-50 p-3">
+                <div className="text-gray-500">Breakout Down</div>
+                <div className="mt-1 font-semibold text-gray-900">
+                  {signalData?.indicators?.breakout_down === 1 ? "⚠️ Yes" : "No"}
+                </div>
               </div>
             </div>
           </div>
