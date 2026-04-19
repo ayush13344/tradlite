@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 /* ========================= CONFIG ========================= */
 
 const API_BASE_URL = "http://localhost:3000/api";
+const ML_BASE_URL = "http://127.0.0.1:8000";
 
 /* ========================= HELPERS ========================= */
 
@@ -322,7 +323,6 @@ function SellModal({ holding, onClose, onSuccess }) {
   const pnlPreview = round2(sellValue - costBasis);
   const isProfit = pnlPreview >= 0;
 
-  // Lock background scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -371,7 +371,6 @@ function SellModal({ holding, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
       <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl ring-1 ring-gray-200 overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between bg-gradient-to-r from-rose-500 to-rose-600 px-6 py-4">
           <div>
             <h2 className="text-lg font-bold text-white">Sell {holding.symbol}</h2>
@@ -390,7 +389,6 @@ function SellModal({ holding, onClose, onSuccess }) {
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Holding summary */}
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 grid grid-cols-3 gap-3 text-xs">
             <div>
               <div className="text-gray-400 font-medium">Avg Buy Price</div>
@@ -406,7 +404,6 @@ function SellModal({ holding, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Order Mode */}
           <div>
             <label className="text-sm font-semibold text-gray-700 block mb-2">Order Mode</label>
             <div className="flex gap-2">
@@ -427,7 +424,6 @@ function SellModal({ holding, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Quantity */}
           <div>
             <label className="text-sm font-semibold text-gray-700 block mb-2">Sell Quantity</label>
             <div className="flex items-center gap-2">
@@ -457,7 +453,6 @@ function SellModal({ holding, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* P&L Preview */}
           <div className={`rounded-2xl p-4 ${isProfit ? "bg-emerald-50 ring-1 ring-emerald-100" : "bg-rose-50 ring-1 ring-rose-100"}`}>
             <div className="text-xs font-semibold text-gray-500 mb-3">Sell Preview</div>
             <div className="grid grid-cols-3 gap-3 text-xs">
@@ -485,7 +480,6 @@ function SellModal({ holding, onClose, onSuccess }) {
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-600 font-medium">{success}</div>
           )}
 
-          {/* Actions */}
           <div className="flex gap-3 pt-1">
             <button
               type="button"
@@ -599,6 +593,81 @@ function MetricBox({ label, value }) {
   );
 }
 
+function RecommendationBadge({ text, positive, warning }) {
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+        positive
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+          : warning
+          ? "bg-amber-50 text-amber-700 ring-1 ring-amber-100"
+          : "bg-rose-50 text-rose-700 ring-1 ring-rose-100"
+      }`}
+    >
+      {text}
+    </span>
+  );
+}
+
+/* ========================= SIMPLE AI UI ========================= */
+
+function AiSummaryStat({ label, value, sub, tone = "neutral" }) {
+  const toneMap = {
+    positive: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    negative: "text-rose-600 bg-rose-50 border-rose-100",
+    warning: "text-amber-600 bg-amber-50 border-amber-100",
+    neutral: "text-slate-700 bg-slate-50 border-slate-100",
+  };
+
+  return (
+    <div className={`rounded-2xl border p-4 ${toneMap[tone]}`}>
+      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500">{label}</div>
+      <div className="mt-2 text-2xl font-bold text-gray-900">{value}</div>
+      {sub ? <div className="mt-1 text-sm font-medium text-gray-500">{sub}</div> : null}
+    </div>
+  );
+}
+
+function SimpleAiActionCard({ title, subtitle, tag, tone = "neutral" }) {
+  const tones = {
+    positive: "border-emerald-100 bg-emerald-50/60",
+    negative: "border-rose-100 bg-rose-50/60",
+    warning: "border-amber-100 bg-amber-50/60",
+    neutral: "border-gray-100 bg-gray-50/70",
+  };
+
+  return (
+    <div className={`rounded-2xl border p-4 ${tones[tone]}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-bold text-gray-900">{title}</div>
+          {subtitle ? <div className="mt-1 text-xs leading-6 text-gray-600">{subtitle}</div> : null}
+        </div>
+        {tag ? (
+          <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-gray-700 ring-1 ring-gray-200 whitespace-nowrap">
+            {tag}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SimpleAiSection({ title, subtitle, children, right }) {
+  return (
+    <div className="rounded-[28px] border border-gray-100 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h4 className="text-base font-bold text-gray-900">{title}</h4>
+          {subtitle ? <p className="mt-1 text-sm text-gray-500">{subtitle}</p> : null}
+        </div>
+        {right}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 /* ========================= HOLDING CARD ========================= */
 
 function HoldingCard({ holding, index, onSell }) {
@@ -640,7 +709,6 @@ function HoldingCard({ holding, index, onSell }) {
             </div>
           </div>
 
-          {/* ── SELL BUTTON ── */}
           <button
             type="button"
             onClick={() => onSell(holding)}
@@ -874,50 +942,99 @@ function PortfolioTrend({ data }) {
 export default function HoldingsPage() {
   const [holdings, setHoldings] = useState([]);
   const [apiSummary, setApiSummary] = useState(null);
+  const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Sell modal state
   const [sellTarget, setSellTarget] = useState(null);
+
+  const fetchRecommendations = useCallback(async (userId) => {
+    if (!userId) {
+      setRecommendations(null);
+      return;
+    }
+
+    try {
+      setRecommendationsLoading(true);
+      const res = await fetch(`${ML_BASE_URL}/portfolio/recommendations/${userId}?t=${Date.now()}`);
+      const data = await res.json();
+
+      if (!res.ok || data?.success === false) {
+        throw new Error(data?.message || "Failed to fetch recommendations");
+      }
+
+      setRecommendations(data);
+    } catch (err) {
+      console.error("Fetch recommendations error:", err);
+      setRecommendations(null);
+    } finally {
+      setRecommendationsLoading(false);
+    }
+  }, []);
 
   const fetchHoldings = useCallback(async (showRefreshState = false) => {
     const userId = getUserIdFromStorage();
     if (!userId) {
-      setHoldings([]); setApiSummary(null);
+      setHoldings([]);
+      setApiSummary(null);
+      setRecommendations(null);
       setError("User not found. Please login again.");
-      setLoading(false); setRefreshing(false); return;
+      setLoading(false);
+      setRefreshing(false);
+      return;
     }
+
     try {
       setError("");
-      if (showRefreshState) setRefreshing(true); else setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/holdings/user/${userId}?t=${Date.now()}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache", Pragma: "no-cache" },
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.message || "Failed to fetch holdings");
+      if (showRefreshState) setRefreshing(true);
+      else setLoading(true);
+
+      const [holdingsResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/holdings/user/${userId}?t=${Date.now()}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }),
+      ]);
+
+      const data = await holdingsResponse.json();
+
+      if (!holdingsResponse.ok || !data.success) {
+        throw new Error(data.message || "Failed to fetch holdings");
+      }
+
       const rawHoldings = Array.isArray(data.holdings) ? data.holdings : [];
       setHoldings(rawHoldings);
       setApiSummary(data.summary || null);
-      console.log("FULL HOLDINGS API RESPONSE:", data);
-      console.log("RAW HOLDINGS ARRAY:", rawHoldings);
+
+      fetchRecommendations(userId);
     } catch (err) {
       console.error("Fetch holdings error:", err);
-      setHoldings([]); setApiSummary(null);
+      setHoldings([]);
+      setApiSummary(null);
+      setRecommendations(null);
       setError(err.message || "Something went wrong while fetching holdings");
     } finally {
-      setLoading(false); setRefreshing(false);
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, []);
+  }, [fetchRecommendations]);
 
   useEffect(() => {
     fetchHoldings();
+
     const handleRefresh = () => fetchHoldings(true);
     window.addEventListener("portfolio-updated", handleRefresh);
     window.addEventListener("orders-updated", handleRefresh);
     window.addEventListener("holding-updated", handleRefresh);
+
     const interval = setInterval(() => fetchHoldings(true), 15000);
+
     return () => {
       window.removeEventListener("portfolio-updated", handleRefresh);
       window.removeEventListener("orders-updated", handleRefresh);
@@ -928,8 +1045,6 @@ export default function HoldingsPage() {
 
   const normalizedHoldings = useMemo(() => holdings.map((h, i) => normalizeHolding(h, i)), [holdings]);
 
-  useEffect(() => { console.log("NORMALIZED HOLDINGS:", normalizedHoldings); }, [normalizedHoldings]);
-
   const analytics = useMemo(() => {
     const totalInvested = round2(normalizedHoldings.reduce((sum, h) => sum + h.investedValue, 0));
     const totalMarketValue = round2(normalizedHoldings.reduce((sum, h) => sum + h.marketValue, 0));
@@ -938,17 +1053,40 @@ export default function HoldingsPage() {
     const totalStocks = normalizedHoldings.length;
     const winners = normalizedHoldings.filter((h) => h.pnl >= 0).length;
     const losers = normalizedHoldings.filter((h) => h.pnl < 0).length;
-    const sectorMap = normalizedHoldings.reduce((acc, h) => { acc[h.sector] = (acc[h.sector] || 0) + h.marketValue; return acc; }, {});
-    const sectorData = Object.entries(sectorMap).map(([label, value]) => ({ label, value: round2(value) })).sort((a, b) => b.value - a.value);
+
+    const sectorMap = normalizedHoldings.reduce((acc, h) => {
+      acc[h.sector] = (acc[h.sector] || 0) + h.marketValue;
+      return acc;
+    }, {});
+
+    const sectorData = Object.entries(sectorMap)
+      .map(([label, value]) => ({ label, value: round2(value) }))
+      .sort((a, b) => b.value - a.value);
+
     const stockPerformance = [...normalizedHoldings].sort((a, b) => b.pnlPct - a.pnlPct);
     const topPerformer = stockPerformance[0] || null;
     const worstPerformer = stockPerformance[stockPerformance.length - 1] || null;
+
     const base = totalMarketValue || 0;
     const trendData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => {
       const factor = [0.93, 0.95, 0.98, 0.97, 1.01, 1.03, 1][i];
       return { label: day, value: round2(base * factor) };
     });
-    return { totalInvested, totalMarketValue, totalPnL, totalPnLPct, totalStocks, winners, losers, sectorData, stockPerformance, topPerformer, worstPerformer, trendData };
+
+    return {
+      totalInvested,
+      totalMarketValue,
+      totalPnL,
+      totalPnLPct,
+      totalStocks,
+      winners,
+      losers,
+      sectorData,
+      stockPerformance,
+      topPerformer,
+      worstPerformer,
+      trendData,
+    };
   }, [normalizedHoldings]);
 
   const totalInvestedToShow = parseNumeric(apiSummary?.totalInvested) !== null ? round2(apiSummary.totalInvested) : analytics.totalInvested;
@@ -956,11 +1094,23 @@ export default function HoldingsPage() {
   const totalPnLToShow = parseNumeric(apiSummary?.totalPnL) !== null ? round2(apiSummary.totalPnL) : analytics.totalPnL;
   const totalPnLPctToShow = totalInvestedToShow > 0 ? round2((totalPnLToShow / totalInvestedToShow) * 100) : 0;
 
+  const recommendationSummary = recommendations?.summary || null;
+  const recommendationHealth = recommendations?.portfolio_health || null;
+  const recommendationSectors = Array.isArray(recommendations?.sector_distribution) ? recommendations.sector_distribution : [];
+  const recommendationStocks = Array.isArray(recommendations?.stock_recommendations) ? recommendations.stock_recommendations : [];
+  const recommendationRebalance = Array.isArray(recommendations?.rebalancing_suggestions) ? recommendations.rebalancing_suggestions : [];
+  const recommendationProfit = Array.isArray(recommendations?.profit_booking_alerts) ? recommendations.profit_booking_alerts : [];
+  const recommendationStops = Array.isArray(recommendations?.stop_loss_recommendations) ? recommendations.stop_loss_recommendations : [];
+  const recommendationMissed = Array.isArray(recommendations?.missed_sector_opportunities) ? recommendations.missed_sector_opportunities : [];
+
+  const riskLevel = String(recommendationHealth?.risk_level || "").toLowerCase();
+  const trendLabel = String(recommendationHealth?.trend || "");
+  const trendLower = trendLabel.toLowerCase();
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_#f8fbff,_#f8fafc_35%,_#ffffff_70%)] px-4 pb-10 pt-24 sm:px-6">
       <AnimatedBackground />
 
-      {/* Sell Modal */}
       {sellTarget && (
         <SellModal
           holding={sellTarget}
@@ -978,7 +1128,7 @@ export default function HoldingsPage() {
             </div>
             <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Holdings Overview</h1>
             <p className="mt-2 max-w-2xl text-sm text-gray-500">
-              Track invested capital, sector allocation, winners, losers, and portfolio performance with corrected holdings calculations.
+              Track invested capital, sector allocation, winners, losers, and portfolio performance with real portfolio recommendations.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -1013,6 +1163,252 @@ export default function HoldingsPage() {
               <StatCard title="Current Value" value={formatMoney(totalMarketValueToShow)} subValue="Live portfolio valuation" icon="📈" />
               <StatCard title="Overall P&L" value={`${totalPnLToShow >= 0 ? "+" : ""}${formatMoney(totalPnLToShow)}`} subValue={formatPct(totalPnLPctToShow)} positive={totalPnLToShow >= 0} icon={totalPnLToShow >= 0 ? "🟢" : "🔴"} />
               <StatCard title="Winners / Losers" value={`${analytics.winners} / ${analytics.losers}`} subValue="Based on current returns" icon="⚖️" />
+            </div>
+
+            <div className="mt-6">
+              <SectionCard
+                title="Portfolio Recommendations"
+                subtitle="Simple action view based on current holdings"
+                right={
+                  recommendationsLoading ? (
+                    <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                      Refreshing...
+                    </div>
+                  ) : recommendations?.generated_at ? (
+                    <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                      Updated: {formatDateTime(recommendations.generated_at)}
+                    </div>
+                  ) : null
+                }
+              >
+                {!recommendations ? (
+                  <div className="rounded-3xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500">
+                    Recommendation engine is not available right now.
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                      <AiSummaryStat
+                        label="Risk Level"
+                        value={recommendationHealth?.risk_level || "--"}
+                        sub={`Score ${recommendationHealth?.risk_score ?? "--"}`}
+                        tone={riskLevel === "low" ? "positive" : riskLevel === "medium" ? "warning" : "negative"}
+                      />
+                      <AiSummaryStat
+                        label="Diversification"
+                        value={recommendationHealth?.diversification_score ?? "--"}
+                        sub="Higher is better"
+                        tone="neutral"
+                      />
+                      <AiSummaryStat
+                        label="Trend"
+                        value={recommendationHealth?.trend || "--"}
+                        sub="Overall portfolio direction"
+                        tone={trendLower === "bullish" ? "positive" : trendLower === "bearish" ? "negative" : "warning"}
+                      />
+                      <AiSummaryStat
+                        label="AI P&L View"
+                        value={formatMoney(recommendationSummary?.total_pnl)}
+                        sub={formatPct(recommendationSummary?.total_pnl_pct)}
+                        tone={parseNumeric(recommendationSummary?.total_pnl) >= 0 ? "positive" : "negative"}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.45fr_0.95fr]">
+                      <SimpleAiSection
+                        title="Stock Actions"
+                        subtitle="Suggested hold, add, reduce, or exit decisions"
+                        right={
+                          <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                            {recommendationStocks.length} items
+                          </div>
+                        }
+                      >
+                        {recommendationStocks.length === 0 ? (
+                          <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No stock recommendations available.</div>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            {recommendationStocks.map((item, idx) => {
+                              const actionText = String(item.action || "").toLowerCase();
+                              const tone =
+                                actionText.includes("hold") || actionText.includes("add")
+                                  ? "positive"
+                                  : actionText.includes("exit") || actionText.includes("reduce")
+                                  ? "negative"
+                                  : actionText.includes("wait")
+                                  ? "warning"
+                                  : "neutral";
+
+                              return (
+                                <SimpleAiActionCard
+                                  key={`${item.symbol}-${idx}`}
+                                  title={`${item.symbol} • ${item.action}`}
+                                  subtitle={item.reason}
+                                  tag={`${item.confidence ?? "--"}%`}
+                                  tone={tone}
+                                />
+                              );
+                            })}
+                          </div>
+                        )}
+                      </SimpleAiSection>
+
+                      <div className="space-y-6">
+                        <SimpleAiSection title="Top Performer" subtitle="Best holding from recommendation engine">
+                          {recommendations?.top_performer ? (
+                            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="text-lg font-bold text-emerald-700">{recommendations.top_performer.symbol}</div>
+                                <RecommendationBadge text={recommendations.top_performer.action} positive />
+                              </div>
+                              <div className="mt-1 text-sm text-gray-600">{recommendations.top_performer.name}</div>
+                              <div className="mt-4 text-2xl font-bold text-gray-900">{formatPct(recommendations.top_performer.pnl_pct)}</div>
+                              <div className="mt-1 text-sm font-semibold text-emerald-700">
+                                {parseNumeric(recommendations.top_performer.pnl) >= 0 ? "+" : ""}
+                                {formatMoney(recommendations.top_performer.pnl)}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No data available.</div>
+                          )}
+                        </SimpleAiSection>
+
+                        <SimpleAiSection title="Worst Performer" subtitle="Weakest holding from recommendation engine">
+                          {recommendations?.worst_performer ? (
+                            <div className="rounded-2xl border border-rose-100 bg-rose-50/60 p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="text-lg font-bold text-rose-700">{recommendations.worst_performer.symbol}</div>
+                                <RecommendationBadge text={recommendations.worst_performer.action} positive={false} />
+                              </div>
+                              <div className="mt-1 text-sm text-gray-600">{recommendations.worst_performer.name}</div>
+                              <div className="mt-4 text-2xl font-bold text-gray-900">{formatPct(recommendations.worst_performer.pnl_pct)}</div>
+                              <div className="mt-1 text-sm font-semibold text-rose-700">
+                                {formatMoney(recommendations.worst_performer.pnl)}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No data available.</div>
+                          )}
+                        </SimpleAiSection>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                      <SimpleAiSection title="Rebalancing Suggestions" subtitle="Where allocation looks too high or too low">
+                        {recommendationRebalance.length === 0 ? (
+                          <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No rebalancing suggestions right now.</div>
+                        ) : (
+                          <div className="space-y-4">
+                            {recommendationRebalance.map((item, idx) => (
+                              <SimpleAiActionCard
+                                key={`${item.symbol}-${idx}`}
+                                title={`${item.symbol} • ${item.action}`}
+                                subtitle={item.reason}
+                                tag={item.suggested_reduction || item.suggested_allocation || ""}
+                                tone={String(item.action || "").toLowerCase().includes("add") ? "positive" : "negative"}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </SimpleAiSection>
+
+                      <SimpleAiSection title="Profit Booking Alerts" subtitle="Positions where partial booking may make sense">
+                        {recommendationProfit.length === 0 ? (
+                          <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No profit booking alerts right now.</div>
+                        ) : (
+                          <div className="space-y-4">
+                            {recommendationProfit.map((item, idx) => (
+                              <SimpleAiActionCard
+                                key={`${item.symbol}-${idx}`}
+                                title={`${item.symbol} • ${item.action}`}
+                                subtitle={item.reason}
+                                tone="positive"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </SimpleAiSection>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                      <SimpleAiSection title="Stop Loss Recommendations" subtitle="Suggested protection levels">
+                        {recommendationStops.length === 0 ? (
+                          <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No stop loss recommendations available.</div>
+                        ) : (
+                          <div className="space-y-4">
+                            {recommendationStops.map((item, idx) => (
+                              <div key={`${item.symbol}-${idx}`} className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="text-sm font-bold text-gray-900">{item.symbol}</div>
+                                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-gray-700 ring-1 ring-gray-200">
+                                    SL
+                                  </span>
+                                </div>
+                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                  <MetricBox label="Current Price" value={formatMoney(item.current_price)} />
+                                  <MetricBox label="Suggested Stop Loss" value={formatMoney(item.suggested_stop_loss)} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </SimpleAiSection>
+
+                      <SimpleAiSection title="Missed Sector Opportunities" subtitle="Sectors where your exposure looks light">
+                        {recommendationMissed.length === 0 ? (
+                          <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No missing sector opportunity found.</div>
+                        ) : (
+                          <div className="space-y-4">
+                            {recommendationMissed.map((item, idx) => (
+                              <SimpleAiActionCard
+                                key={`${item.sector}-${idx}`}
+                                title={item.sector}
+                                subtitle={item.reason}
+                                tag="Opportunity"
+                                tone="neutral"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </SimpleAiSection>
+                    </div>
+
+                    <SimpleAiSection title="Sector Allocation" subtitle="Sector distribution used by the recommendation engine">
+                      {recommendationSectors.length === 0 ? (
+                        <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No sector distribution available.</div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                          {recommendationSectors.map((item, idx) => (
+                            <div key={`${item.sector}-${idx}`} className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: getColorByIndex(idx) }} />
+                                  <div className="text-sm font-bold text-gray-900">{item.sector}</div>
+                                </div>
+                                <div className="text-xs font-bold text-gray-600">{item.allocation}%</div>
+                              </div>
+                              <div className="mt-3">
+                                <div className="h-2 overflow-hidden rounded-full bg-white shadow-inner">
+                                  <div
+                                    className="h-full rounded-full transition-all duration-700"
+                                    style={{
+                                      width: `${Math.min(100, parseNumeric(item.allocation) || 0)}%`,
+                                      backgroundColor: getColorByIndex(idx),
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="mt-3 text-xs font-medium text-gray-600">
+                                Value: {formatMoney(item.value)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </SimpleAiSection>
+                  </div>
+                )}
+              </SectionCard>
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -1055,6 +1451,7 @@ export default function HoldingsPage() {
                     <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No data available.</div>
                   )}
                 </SectionCard>
+
                 <SectionCard title="Lowest Performer" subtitle="Weakest holding by return">
                   {analytics.worstPerformer ? (
                     <div className="rounded-3xl bg-gradient-to-br from-rose-50 to-white p-5 ring-1 ring-rose-100">
